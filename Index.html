@@ -1,0 +1,197 @@
+<title>Captain Anonymous </title> <title>Story Relay | Collaborative Writing</title> <script src="https://cdn.tailwindcss.com"></script> <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script> <style> [x-cloak] { display: none !important; } </style>
+<!-- Header -->
+<header class="bg-indigo-700 text-white shadow-lg p-4 mb-8">
+    <div class="max-w-5xl mx-auto flex justify-between items-center">
+        <h1 class="text-2xl font-bold tracking-tight cursor-pointer" @click="view = 'home'">✍️ StoryRelay</h1>
+        <div class="flex items-center gap-4">
+            <span class="text-sm opacity-80" x-text="'Writing as: ' + currentUser"></span>
+            <button @click="view = 'create'" class="bg-white text-indigo-700 px-4 py-2 rounded-lg font-bold hover:bg-indigo-50 transition">Start New Story</button>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 pb-20">
+
+    <!-- VIEW: HOME (List of Stories) -->
+    <template x-if="view === 'home'">
+        <div>
+            <h2 class="text-3xl font-bold mb-6">Active Story Relays</h2>
+            <div class="grid gap-6 md:grid-cols-2">
+                <template x-for="story in stories" :key="story.id">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer" @click="openStory(story)">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-slate-800" x-text="story.title"></h3>
+                            <span :class="story.genre === 'Open' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'" 
+                                  class="text-xs font-bold px-2 py-1 rounded uppercase tracking-wider" 
+                                  x-text="story.genre"></span>
+                        </div>
+                        <p class="text-slate-500 text-sm mb-4" x-text="'Length: ' + story.pages.length + ' page(s)'"></p>
+                        <div class="text-slate-600 line-clamp-3 italic" x-text="story.pages[0].content.substring(0, 150) + '...'"></div>
+                        <div class="mt-4 flex items-center text-indigo-600 font-semibold text-sm">
+                            Take over this story &rarr;
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <!-- VIEW: CREATE STORY -->
+    <template x-if="view === 'create'">
+        <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
+            <h2 class="text-2xl font-bold mb-6">Start a New Relay</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Story Title</label>
+                    <input type="text" x-model="newStory.title" class="w-full border p-2 rounded-lg" placeholder="e.g. The Neon Silence">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Genre</label>
+                    <select x-model="newStory.genre" class="w-full border p-2 rounded-lg">
+                        <option value="Fantasy">Fantasy</option>
+                        <option value="Sci-Fi">Sci-Fi</option>
+                        <option value="Horror">Horror</option>
+                        <option value="Romance">Romance</option>
+                        <option value="Open">Open (Genre can change every page)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-red-600">The First Page (Min 250 words)</label>
+                    <textarea x-model="newStory.content" class="w-full border p-2 rounded-lg h-64" placeholder="Start the story here..."></textarea>
+                    <div class="flex justify-between mt-1 text-xs">
+                        <span :class="countWords(newStory.content) >= 250 ? 'text-green-600 font-bold' : 'text-slate-400'" 
+                              x-text="'Word count: ' + countWords(newStory.content) + ' / 250'"></span>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button @click="saveNewStory()" :disabled="countWords(newStory.content) < 250" class="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-bold disabled:opacity-50">Publish Story</button>
+                    <button @click="view = 'home'" class="px-6 py-3 text-slate-500">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- VIEW: READ & WRITING (Takeover) -->
+    <template x-if="view === 'read'">
+        <div class="max-w-3xl mx-auto">
+            <button @click="view = 'home'" class="text-indigo-600 mb-4 font-medium">&larr; Back to Library</button>
+            
+            <div class="bg-white p-8 rounded-xl shadow-sm mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold" x-text="activeStory.title"></h2>
+                    <span class="bg-slate-100 px-3 py-1 rounded-full text-sm font-bold" x-text="'Genre: ' + activeStory.genre"></span>
+                </div>
+
+                <!-- Story Content -->
+                <div class="prose prose-slate lg:prose-lg">
+                    <template x-for="(page, index) in activeStory.pages">
+                        <div class="mb-8 pb-8 border-b border-slate-100">
+                            <div class="flex items-center gap-2 mb-2 text-xs text-slate-400 uppercase font-bold tracking-widest">
+                                <span x-text="'Page ' + (index + 1)"></span>
+                                <span>•</span>
+                                <span x-text="'Author: ' + page.author"></span>
+                            </div>
+                            <p class="text-slate-700 leading-relaxed whitespace-pre-line" x-text="page.content"></p>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Takeover Section -->
+                <div class="mt-12 bg-indigo-50 p-6 rounded-xl border-2 border-dashed border-indigo-200">
+                    <h3 class="text-xl font-bold text-indigo-900 mb-2">Take Over This Story</h3>
+                    <p class="text-indigo-700 text-sm mb-4">
+                        You are adding **Page <span x-text="activeStory.pages.length + 1"></span>**. 
+                        <span x-show="activeStory.genre !== 'Open'">Maintain the <strong><span x-text="activeStory.genre"></span></strong> genre.</span>
+                    </p>
+                    
+                    <textarea x-model="takeoverContent" class="w-full border-2 border-white p-4 rounded-lg h-64 focus:border-indigo-400 outline-none" placeholder="Write your contribution here..."></textarea>
+                    
+                    <div class="flex justify-between items-center mt-4">
+                        <span class="text-sm font-medium" :class="countWords(takeoverContent) >= 250 ? 'text-green-600' : 'text-indigo-400'" 
+                              x-text="'Word count: ' + countWords(takeoverContent) + ' / 250'"></span>
+                        <button @click="submitTakeover()" :disabled="countWords(takeoverContent) < 250" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-bold shadow-md hover:bg-indigo-700 disabled:opacity-50 transition">Submit Your Page</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+</main>
+
+<script>
+    function app() {
+        return {
+            view: 'home',
+            currentUser: 'Author_' + Math.floor(Math.random() * 1000),
+            stories: [],
+            activeStory: null,
+            takeoverContent: '',
+            newStory: {
+                title: '',
+                genre: 'Fantasy',
+                content: ''
+            },
+
+            init() {
+                const saved = localStorage.getItem('story_relay_data');
+                if (saved) {
+                    this.stories = JSON.parse(saved);
+                } else {
+                    // Demo Story
+                    this.stories = [{
+                        id: Date.now(),
+                        title: 'The Clockwork Alchemist',
+                        genre: 'Fantasy',
+                        pages: [{
+                            author: 'OriginalWriter',
+                            content: 'This is a demo story. To test the app, you need to write a full page (at least 250 words). You can copy/paste some placeholder text if you just want to see how the "Takeover" mechanics work. In a real scenario, the app would use an AI check here to make sure the author followed the established genre rules. \n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+                        }]
+                    }];
+                }
+            },
+
+            countWords(str) {
+                return str.trim() ? str.trim().split(/\s+/).length : 0;
+            },
+
+            saveNewStory() {
+                const story = {
+                    id: Date.now(),
+                    title: this.newStory.title,
+                    genre: this.newStory.genre,
+                    pages: [{
+                        author: this.currentUser,
+                        content: this.newStory.content
+                    }]
+                };
+                this.stories.unshift(story);
+                this.saveToLocal();
+                this.newStory = { title: '', genre: 'Fantasy', content: '' };
+                this.view = 'home';
+            },
+
+            openStory(story) {
+                this.activeStory = story;
+                this.view = 'read';
+                this.takeoverContent = '';
+                window.scrollTo(0,0);
+            },
+
+            submitTakeover() {
+                const storyIndex = this.stories.findIndex(s => s.id === this.activeStory.id);
+                this.stories[storyIndex].pages.push({
+                    author: this.currentUser,
+                    content: this.takeoverContent
+                });
+                this.saveToLocal();
+                this.takeoverContent = '';
+                alert("Submission Successful! You have taken over the story.");
+                this.view = 'home';
+            },
+
+            saveToLocal() {
+                localStorage.setItem('story_relay_data', JSON.stringify(this.stories));
+            }
+        }
+    }
+</script>
